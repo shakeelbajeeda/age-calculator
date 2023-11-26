@@ -32,6 +32,7 @@
 
 <script>
 import Popup from "components/Popup.vue";
+
 export default {
   name: 'Game',
   components: {Popup},
@@ -61,11 +62,22 @@ export default {
      */
     play(index) {
       if (!this.playerSelections.includes(index) && !this.systemSelections.includes(index)) {
-        this.playerSelections.push(index);
+        // Check if the player has a winning move
+        let winningMove = this.findWinningMove(this.playerSelections);
+
+        if (winningMove !== null) {
+          this.playerSelections.push(winningMove);
+        } else {
+          // If the player doesn't have a winning move, play a random move
+          this.playerSelections.push(index);
+        }
+
         this.checkWinner();
+
+        // System play after a short delay
         setTimeout(() => {
           this.systemPlay();
-        }, 900)
+        }, 900);
       }
     },
 
@@ -73,32 +85,33 @@ export default {
      * System Play
      */
     systemPlay() {
-      let indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-      let random = 0;
+      // Check if the system can win in the next move
+      let winningMove = this.findWinningMove(this.systemSelections);
 
-      if (this.playerSelections.length <= 2) {
-        this.winnersIndexes.forEach(item => {
-          if (this.playerSelections.length === 1 && item[0] === this.playerSelections[0]) {
-            random = item[1];
-          }
-          if (item[2] === this.playerSelections[1] && item[0] === this.playerSelections[0]) {
-            random = item[1];
-          } else if (item[0] === this.playerSelections[0] && item[2] === this.playerSelections[1]) {
-            random = item[1];
-          }else if (this.playerSelections.length === 2 && item[1] === this.playerSelections[1]) {
-            random = item[2];
-          }
-        })
-      } else {
-        random = random = Math.floor(Math.random() * indexes.length)  ;
+      if (winningMove !== null) {
+        this.systemSelections.push(winningMove);
+        this.checkWinner();
+        return;
       }
+
+      // Check if the player can win in the next move and block that move
+      let blockingMove = this.findWinningMove(this.playerSelections);
+
+      if (blockingMove !== null) {
+        this.systemSelections.push(blockingMove);
+        this.checkWinner();
+        return;
+      }
+
+      // If neither player nor system can win, play a random move
+      let indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+      let random = Math.floor(Math.random() * indexes.length);
 
       if (!this.playerSelections.includes(random) && !this.systemSelections.includes(random)) {
         this.systemSelections.push(random);
         this.checkWinner();
-        return;
-      }else {
-        this.systemPlay();
+      } else {
+        this.systemPlay(); // Try again if the random move is already taken
       }
     },
 
@@ -158,6 +171,30 @@ export default {
       this.next_player = 1;
       this.playerSelections = [];
       this.systemSelections = [];
+    },
+
+    /**
+     * Helper function to find a winning move for the system
+     */
+    findWinningMove(selections) {
+      for (let i = 0; i < this.winnersIndexes.length; i++) {
+        let count = 0;
+        let emptyIndex = null;
+
+        for (let j = 0; j < this.winnersIndexes[i].length; j++) {
+          if (selections.includes(this.winnersIndexes[i][j])) {
+            count++;
+          } else {
+            emptyIndex = this.winnersIndexes[i][j];
+          }
+        }
+
+        if (count === 2 && emptyIndex !== null && !this.playerSelections.includes(emptyIndex) && !this.systemSelections.includes(emptyIndex)) {
+          return emptyIndex; // Return the winning move
+        }
+      }
+
+      return null; // No winning move found
     },
   }
 }
